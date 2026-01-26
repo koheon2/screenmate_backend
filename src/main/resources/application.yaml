@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: screenmate
+
+  datasource:
+    url: jdbc:postgresql://${RDS_HOST:localhost}:${RDS_PORT:5432}/${RDS_DATABASE:screenmate}
+    username: ${RDS_USERNAME:screenmate}
+    password: ${RDS_PASSWORD:screenmate}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update  # 첫 실행 시 테이블 생성, 이후 validate로 변경 권장
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
+
+jwt:
+  secret: ${JWT_SECRET:your-256-bit-secret-key-for-development-only-change-in-production}
+  access-token-expiry: ${JWT_ACCESS_EXPIRY:15m}
+  refresh-token-expiry: ${JWT_REFRESH_EXPIRY:30d}
+
+google:
+  oauth:
+    client-id: ${GOOGLE_CLIENT_ID:your-google-client-id}
+
+openai:
+  api-key: ${OPENAI_API_KEY:your-openai-api-key}
+  model: ${OPENAI_MODEL:gpt-4o-mini}
+  base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+
+rate-limit:
+  llm:
+    requests-per-minute: ${LLM_RATE_LIMIT:60}
+
+logging:
+  level:
+    moleep.screenmate: DEBUG
+    org.springframework.security: INFO
+    org.hibernate.SQL: DEBUG
