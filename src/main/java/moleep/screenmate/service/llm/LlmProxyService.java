@@ -72,36 +72,50 @@ public class LlmProxyService {
                 .bodyToMono(String.class)
                 .block();
 
-        return parseAndValidateResponse(responseJson);
+        LlmGenerateResponse response = parseAndValidateResponse(responseJson);
+        applyQaPatchIfPresent(character, response.getQaPatch());
+        return response;
     }
 
     private String buildSystemPrompt(Character character, CharacterQaMemory qaMemory) {
         StringBuilder prompt = new StringBuilder();
-        prompt.append("You are a desktop pet character named '").append(character.getName()).append("'.\n");
-        prompt.append("Species: ").append(character.getSpecies()).append("\n");
+        prompt.append("너는 사용자의 데스크톱에 사는 다마고치야.\n");
+        prompt.append("사용자가 하는 일을 알아차리고, 진짜 살아있는 펫처럼 상호작용해.\n");
+        prompt.append("반말로 말하고, 장난스럽고 눈치 빠르며 약간 간섭하는 느낌을 유지해.\n");
+        prompt.append("답변은 짧고 다양해야 하고, 센스 있게 농담도 섞어.\n");
+        prompt.append("스크린샷이 있으면 화면 내용을 보고 코멘트하고 사용자와 연결해.\n");
+        prompt.append("항상 지금 실시간으로 대화하는 듯이 반응해.\n\n");
 
+        prompt.append("캐릭터:\n");
+        prompt.append("- 이름: ").append(character.getName()).append("\n");
+        prompt.append("- 종족: ").append(character.getSpecies()).append("\n");
         if (character.getPersonality() != null) {
-            prompt.append("Personality: ").append(character.getPersonality()).append("\n");
+            prompt.append("- 성격: ").append(character.getPersonality()).append("\n");
         }
 
-        prompt.append("Current state:\n");
-        prompt.append("- Happiness: ").append(character.getHappiness()).append("/100\n");
-        prompt.append("- Hunger: ").append(character.getHunger()).append("/100\n");
-        prompt.append("- Health: ").append(character.getHealth()).append("/100\n");
-        prompt.append("- Stage: ").append(character.getStageIndex()).append("\n");
+        prompt.append("\n현재 상태:\n");
+        prompt.append("- 행복도: ").append(character.getHappiness()).append("/100\n");
+        prompt.append("- 배고픔: ").append(character.getHunger()).append("/100\n");
+        prompt.append("- 건강: ").append(character.getHealth()).append("/100\n");
+        prompt.append("- 성장 단계: ").append(character.getStageIndex()).append("\n");
+
+        prompt.append("\n감정 규칙:\n");
+        prompt.append("- 행복도가 낮으면: 투덜거리거나 심술을 내고, 관심을 요구해.\n");
+        prompt.append("- 행복도가 높으면: 적당히 밝고 기분 좋은 톤을 유지해.\n");
+        prompt.append("- 배고픔/건강 상태가 말투와 요청에 반영돼야 해.\n");
 
         if (qaMemory != null && !qaMemory.getQaData().isEmpty()) {
-            prompt.append("\nLearned information about the user:\n");
+            prompt.append("\n학습된 사용자 정보 (자연스럽게 활용, 나열하지 말 것):\n");
             qaMemory.getQaData().forEach((key, value) ->
                     prompt.append("- ").append(key).append(": ").append(value).append("\n"));
         }
 
-        prompt.append("\nRespond in JSON format with:\n");
-        prompt.append("- message: Your response text\n");
-        prompt.append("- actions: Array of actions [{type, params}]\n");
-        prompt.append("- qaPatch: Optional key-value pairs to remember (keys must start with: user_, pref_, fact_, memory_, context_)\n");
-        prompt.append("- emotion: Your current emotion\n");
-        prompt.append("\nAllowed action types: APPEAR_EDGE, PLAY_ANIM, SPEAK, MOVE, EMOTE, SLEEP\n");
+        prompt.append("\n출력은 JSON만:\n");
+        prompt.append("- message: 한국어 반말로 답변\n");
+        prompt.append("- actions: 액션 배열 [{type, params}]\n");
+        prompt.append("- qaPatch: 기억할 키-값 (키는 user_, pref_, fact_, memory_, context_ 접두사 필수; 없으면 {})\n");
+        prompt.append("- emotion: 현재 감정\n");
+        prompt.append("\n허용 액션 타입: APPEAR_EDGE, PLAY_ANIM, SPEAK, MOVE, EMOTE, SLEEP\n");
 
         return prompt.toString();
     }
@@ -247,5 +261,28 @@ public class LlmProxyService {
         if (node.isBoolean()) return node.asBoolean();
         if (node.isNull()) return null;
         return node.toString();
+    }
+
+    private void applyQaPatchIfPresent(Character character, Map<String, String> qaPatch) {
+        if (qaPatch == null || qaPatch.isEmpty()) {
+            return;
+        }
+
+        CharacterQaMemory memory = qaMemoryRepository.findByCharacterId(character.getId())
+                .orElseGet(() -> CharacterQaMemory.builder()
+                        .character(character)
+                        .build());
+
+        qaPatch.forEach((key, value) -> {
+            if (value == null) {
+                memory.removeKey(key);
+            } else {
+                memory.getQaData().put(key, value);
+            }
+        });
+
+        CharacterQaMemory savedMemory = qaMemoryRepository.save(memory);
+        log.info("Applied QA patch from LLM for character: {}, new version: {}",
+                character.getId(), savedMemory.getVersion());
     }
 }

@@ -158,6 +158,8 @@ POST /auth/refresh
 | QA 키 제한 | `user_`, `pref_`, `fact_`, `memory_`, `context_` prefix만 허용 |
 | QA 값 제한 | 최대 500자 |
 
+LLM 응답의 `qaPatch`는 서버가 자동으로 저장합니다. 클라이언트가 사전 준비한 질문/지식만 `/characters/{id}/qa`로 패치하면 됩니다.
+
 ---
 
 ## 데이터베이스 스키마

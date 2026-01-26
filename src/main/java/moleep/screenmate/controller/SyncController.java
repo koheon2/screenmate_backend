@@ -119,22 +119,6 @@ public class SyncController {
         return ResponseEntity.noContent().build();
     }
 
-    @Tag(name = "QA Memory", description = "캐릭터 QA 메모리 관리 API")
-    @Operation(summary = "QA 메모리 조회", description = "캐릭터의 QA 메모리를 조회합니다.")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "조회 성공",
-                    content = @Content(schema = @Schema(implementation = QaMemoryResponse.class))),
-            @ApiResponse(responseCode = "404", description = "캐릭터 또는 메모리를 찾을 수 없음",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    })
-    @GetMapping("/characters/{id}/qa")
-    public ResponseEntity<QaMemoryResponse> getQaMemory(
-            @Parameter(description = "캐릭터 ID") @PathVariable UUID id,
-            @AuthenticationPrincipal User user) {
-        QaMemoryResponse response = qaMemoryService.getQaMemory(id, user);
-        return ResponseEntity.ok(response);
-    }
-
     @Tag(name = "QA Memory")
     @Operation(summary = "QA 메모리 패치", description = "캐릭터의 QA 메모리를 부분 업데이트합니다. 낙관적 락을 사용하며, 버전이 불일치하면 409 Conflict를 반환합니다.")
     @ApiResponses({
