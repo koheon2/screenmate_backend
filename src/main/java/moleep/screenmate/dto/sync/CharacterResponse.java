@@ -22,6 +22,9 @@ public class CharacterResponse {
     @Schema(description = "종족", example = "고양이")
     private String species;
 
+    @Schema(description = "초대 코드", example = "H7K9Q2LM")
+    private String inviteCode;
+
     @Schema(description = "성격 설명", example = "장난꾸러기이고 호기심이 많음")
     private String personality;
 
@@ -69,6 +72,7 @@ public class CharacterResponse {
                 .id(character.getId())
                 .name(character.getName())
                 .species(character.getSpecies())
+                .inviteCode(character.getInviteCode())
                 .personality(character.getPersonality())
                 .stageIndex(character.getStageIndex())
                 .happiness(character.getHappiness())

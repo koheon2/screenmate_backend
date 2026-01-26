@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.security.SecureRandom;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -24,10 +25,14 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CharacterService {
 
+    private static final int INVITE_CODE_LENGTH = 8;
+    private static final String INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
     private final CharacterRepository characterRepository;
     private final CharacterQaMemoryRepository qaMemoryRepository;
     private final OwnershipValidator ownershipValidator;
     private final CharacterValidator characterValidator;
+    private final SecureRandom random = new SecureRandom();
 
     @Transactional
     public CharacterResponse createCharacter(User user, CharacterCreateRequest request) {
@@ -36,6 +41,7 @@ public class CharacterService {
                 .name(request.getName())
                 .species(request.getSpecies())
                 .personality(request.getPersonality())
+                .inviteCode(generateUniqueInviteCode())
                 .build();
 
         character = characterRepository.save(character);
@@ -121,5 +127,24 @@ public class CharacterService {
         Character character = ownershipValidator.validateAndGetCharacter(characterId, user);
         characterRepository.delete(character);
         log.info("Deleted character: {}", characterId);
+    }
+
+    private String generateUniqueInviteCode() {
+        for (int attempt = 0; attempt < 5; attempt++) {
+            String code = randomInviteCode();
+            if (!characterRepository.existsByInviteCode(code)) {
+                return code;
+            }
+        }
+        throw new IllegalStateException("Failed to generate unique invite code");
+    }
+
+    private String randomInviteCode() {
+        StringBuilder builder = new StringBuilder(INVITE_CODE_LENGTH);
+        for (int i = 0; i < INVITE_CODE_LENGTH; i++) {
+            int index = random.nextInt(INVITE_CODE_ALPHABET.length());
+            builder.append(INVITE_CODE_ALPHABET.charAt(index));
+        }
+        return builder.toString();
     }
 }

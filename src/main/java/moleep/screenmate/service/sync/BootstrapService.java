@@ -88,6 +88,7 @@ public class BootstrapService {
                 .id(character.getId())
                 .name(character.getName())
                 .species(character.getSpecies())
+                .inviteCode(character.getInviteCode())
                 .personality(character.getPersonality())
                 .stageIndex(character.getStageIndex())
                 .happiness(character.getHappiness())

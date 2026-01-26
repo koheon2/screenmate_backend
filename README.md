@@ -289,6 +289,19 @@ users (1) ──────── (1) refresh_tokens
 | PATCH | `/characters/{id}/qa` | QA 메모리 패치 |
 | POST | `/characters/{id}/events` | 이벤트 기록 |
 
+### 친구 (Friend)
+
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| GET | `/characters/search` | 캐릭터 검색 (이름/종족/유저명/초대코드) |
+| POST | `/characters/{id}/friend-requests` | 친구 요청 보내기 |
+| GET | `/characters/{id}/friend-requests` | 친구 요청 목록 |
+| POST | `/characters/{id}/friend-requests/{requestId}/accept` | 친구 요청 수락 |
+| POST | `/characters/{id}/friend-requests/{requestId}/reject` | 친구 요청 거절 |
+| GET | `/characters/{id}/friends` | 친구 목록 조회 |
+| POST | `/characters/{id}/friends/{friendId}/messages` | 메시지/이모티콘 보내기 |
+| GET | `/characters/{id}/friends/{friendId}/messages` | 메시지 목록 조회 |
+
 ### LLM 프록시
 
 | Method | Endpoint | Content-Type | 설명 |

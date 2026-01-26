@@ -32,6 +32,7 @@ public class BootstrapResponse {
         private UUID id;
         private String name;
         private String species;
+        private String inviteCode;
         private String personality;
         private Integer stageIndex;
         private Integer happiness;

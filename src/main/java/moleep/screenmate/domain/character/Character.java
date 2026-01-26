@@ -32,6 +32,9 @@ public class Character {
     @Column(name = "species", nullable = false)
     private String species;
 
+    @Column(name = "invite_code", nullable = false, unique = true, length = 12)
+    private String inviteCode;
+
     @Column(name = "personality")
     private String personality;
 
