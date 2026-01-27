@@ -20,7 +20,6 @@ import moleep.screenmate.exception.BadRequestException;
 import moleep.screenmate.exception.RateLimitExceededException;
 import moleep.screenmate.validation.ActionWhitelistValidator;
 import moleep.screenmate.validation.OwnershipValidator;
-import moleep.screenmate.validation.QaMemoryValidator;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -46,7 +45,6 @@ public class LlmProxyService {
     private final RateLimitConfig rateLimitConfig;
     private final OwnershipValidator ownershipValidator;
     private final ActionWhitelistValidator actionWhitelistValidator;
-    private final QaMemoryValidator qaMemoryValidator;
     private final CharacterQaMemoryRepository qaMemoryRepository;
     private final CharacterRepository characterRepository;
     private final CharacterConversationRepository conversationRepository;
@@ -91,7 +89,6 @@ public class LlmProxyService {
         }
 
         LlmGenerateResponse response = parseAndValidateResponse(responseJson);
-        applyQaPatchIfPresent(character, response.getQaPatch());
         IntimacyResult intimacyResult = applyIntimacyDelta(character, response.getIntimacyDelta());
 
         persistConversationAndMaybeSummarize(character, request.getUserMessage(), response.getMessage());
@@ -100,7 +97,6 @@ public class LlmProxyService {
         return LlmGenerateResponse.builder()
                 .message(response.getMessage())
                 .actions(response.getActions())
-                .qaPatch(response.getQaPatch())
                 .emotion(response.getEmotion())
                 .intimacyDelta(response.getIntimacyDelta())
                 .intimacyScore(intimacyResult.score())
@@ -170,7 +166,6 @@ public class LlmProxyService {
         prompt.append("\n출력은 JSON만:\n");
         prompt.append("- message: 한국어 반말로 답변\n");
         prompt.append("- actions: 액션 배열 [{type, params}]\n");
-        prompt.append("- qaPatch: 기억할 키-값 (키는 user_, pref_, fact_, memory_, context_ 접두사 필수; 없으면 {})\n");
         prompt.append("- emotion: 현재 감정\n");
         prompt.append("- intimacyDelta: 이번 대화로 친밀도가 어떻게 변했는지 숫자로 제안 (-0.3, 0, 0.1 중 하나만)\n");
         prompt.append("  * 더 친해졌다고 느끼면 0.1\n");
@@ -292,17 +287,6 @@ public class LlmProxyService {
 
             List<LlmGenerateResponse.Action> filteredActions = actionWhitelistValidator.filterActions(actions);
 
-            Map<String, String> qaPatch = new HashMap<>();
-            JsonNode qaPatchNode = contentJson.path("qaPatch");
-            if (qaPatchNode.isObject()) {
-                qaPatchNode.fields().forEachRemaining(entry ->
-                        qaPatch.put(entry.getKey(), entry.getValue().asText()));
-            }
-
-            if (!qaPatch.isEmpty()) {
-                qaMemoryValidator.validateQaPatch(qaPatch);
-            }
-
             Double intimacyDelta = null;
             JsonNode intimacyNode = contentJson.path("intimacyDelta");
             if (intimacyNode.isNumber()) {
@@ -318,7 +302,6 @@ public class LlmProxyService {
             return LlmGenerateResponse.builder()
                     .message(message)
                     .actions(filteredActions)
-                    .qaPatch(qaPatch.isEmpty() ? null : qaPatch)
                     .emotion(emotion)
                     .intimacyDelta(intimacyDelta)
                     .build();
@@ -335,29 +318,6 @@ public class LlmProxyService {
         if (node.isBoolean()) return node.asBoolean();
         if (node.isNull()) return null;
         return node.toString();
-    }
-
-    private void applyQaPatchIfPresent(Character character, Map<String, String> qaPatch) {
-        if (qaPatch == null || qaPatch.isEmpty()) {
-            return;
-        }
-
-        CharacterQaMemory memory = qaMemoryRepository.findByCharacterId(character.getId())
-                .orElseGet(() -> CharacterQaMemory.builder()
-                        .character(character)
-                        .build());
-
-        qaPatch.forEach((key, value) -> {
-            if (value == null) {
-                memory.removeKey(key);
-            } else {
-                memory.getQaData().put(key, value);
-            }
-        });
-
-        CharacterQaMemory savedMemory = qaMemoryRepository.save(memory);
-        log.info("Applied QA patch from LLM for character: {}, new version: {}",
-                character.getId(), savedMemory.getVersion());
     }
 
     private List<CharacterConversation> getRecentConversations(UUID characterId) {
