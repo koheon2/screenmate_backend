@@ -39,6 +39,16 @@ public class UserProgressController {
         return ResponseEntity.ok(userProgressService.getUserAchievements(user));
     }
 
+    @Operation(summary = "업적 정의 조회", description = "전체 업적 정의 목록을 조회합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공")
+    })
+    @GetMapping("/users/me/achievements/definitions")
+    public ResponseEntity<List<moleep.screenmate.dto.progress.AchievementDefinitionResponse>> getAchievementDefinitions(
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(userProgressService.getAchievementDefinitions());
+    }
+
     @Operation(summary = "업적 진행도/해금 저장", description = "특정 업적의 진행도 또는 해금 정보를 저장합니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "저장 성공",
@@ -62,6 +72,16 @@ public class UserProgressController {
     @GetMapping("/users/me/places")
     public ResponseEntity<List<UserDiscoveredPlaceResponse>> getMyPlaces(@AuthenticationPrincipal User user) {
         return ResponseEntity.ok(userProgressService.getDiscoveredPlaces(user));
+    }
+
+    @Operation(summary = "장소 정의 조회", description = "전체 장소 정의 목록을 조회합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공")
+    })
+    @GetMapping("/users/me/places/definitions")
+    public ResponseEntity<List<moleep.screenmate.dto.progress.PlaceDefinitionResponse>> getPlaceDefinitions(
+            @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(userProgressService.getPlaceDefinitions());
     }
 
     @Operation(summary = "장소 발견 기록", description = "특정 장소를 발견한 것으로 기록합니다.")

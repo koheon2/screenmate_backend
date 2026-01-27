@@ -37,6 +37,13 @@ public class UserProgressService {
     private final OwnershipValidator ownershipValidator;
 
     @Transactional(readOnly = true)
+    public List<moleep.screenmate.dto.progress.AchievementDefinitionResponse> getAchievementDefinitions() {
+        return achievementDefinitionRepository.findAll().stream()
+                .map(moleep.screenmate.dto.progress.AchievementDefinitionResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public List<UserAchievementResponse> getUserAchievements(User user) {
         return userAchievementRepository.findByUserIdWithDefinition(user.getId()).stream()
                 .map(UserAchievementResponse::from)
@@ -79,6 +86,13 @@ public class UserProgressService {
     public List<UserDiscoveredPlaceResponse> getDiscoveredPlaces(User user) {
         return userDiscoveredPlaceRepository.findByUserIdWithDefinition(user.getId()).stream()
                 .map(UserDiscoveredPlaceResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<moleep.screenmate.dto.progress.PlaceDefinitionResponse> getPlaceDefinitions() {
+        return placeDefinitionRepository.findAll().stream()
+                .map(moleep.screenmate.dto.progress.PlaceDefinitionResponse::from)
                 .collect(Collectors.toList());
     }
 
