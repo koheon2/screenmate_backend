@@ -35,6 +35,10 @@ public class Character {
     @Column(name = "invite_code", nullable = false, unique = true, length = 12)
     private String inviteCode;
 
+    @Column(name = "home_place_id", nullable = false, length = 100)
+    @Builder.Default
+    private String homePlaceId = "house1";
+
     @Column(name = "personality")
     private String personality;
 

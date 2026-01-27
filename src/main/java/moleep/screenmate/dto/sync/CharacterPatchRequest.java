@@ -50,4 +50,7 @@ public class CharacterPatchRequest {
 
     @Schema(description = "마지막 놀이 시각")
     private Instant lastPlayedAt;
+
+    @Schema(description = "집 장소 ID", example = "house2")
+    private String homePlaceId;
 }

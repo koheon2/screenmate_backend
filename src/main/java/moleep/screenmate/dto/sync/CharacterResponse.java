@@ -25,6 +25,9 @@ public class CharacterResponse {
     @Schema(description = "초대 코드", example = "H7K9Q2LM")
     private String inviteCode;
 
+    @Schema(description = "집 장소 ID", example = "house4")
+    private String homePlaceId;
+
     @Schema(description = "성격 설명", example = "장난꾸러기이고 호기심이 많음")
     private String personality;
 
@@ -73,6 +76,7 @@ public class CharacterResponse {
                 .name(character.getName())
                 .species(character.getSpecies())
                 .inviteCode(character.getInviteCode())
+                .homePlaceId(character.getHomePlaceId())
                 .personality(character.getPersonality())
                 .stageIndex(character.getStageIndex())
                 .happiness(character.getHappiness())

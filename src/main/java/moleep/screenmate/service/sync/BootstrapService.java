@@ -105,6 +105,7 @@ public class BootstrapService {
                 .name(character.getName())
                 .species(character.getSpecies())
                 .inviteCode(character.getInviteCode())
+                .homePlaceId(character.getHomePlaceId())
                 .personality(character.getPersonality())
                 .stageIndex(character.getStageIndex())
                 .happiness(character.getHappiness())

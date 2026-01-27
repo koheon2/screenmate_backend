@@ -28,4 +28,8 @@ public class CharacterCreateRequest {
     @Schema(description = "성격 설명", example = "장난꾸러기이고 호기심이 많음", maxLength = 500)
     @Size(max = 500, message = "personality must not exceed 500 characters")
     private String personality;
+
+    @Schema(description = "집 장소 ID", example = "house3", maxLength = 100)
+    @Size(max = 100, message = "homePlaceId must not exceed 100 characters")
+    private String homePlaceId;
 }

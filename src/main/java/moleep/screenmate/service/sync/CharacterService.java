@@ -40,6 +40,7 @@ public class CharacterService {
                 .user(user)
                 .name(request.getName())
                 .species(request.getSpecies())
+                .homePlaceId(resolveHomePlaceId(request.getHomePlaceId()))
                 .personality(request.getPersonality())
                 .inviteCode(generateUniqueInviteCode())
                 .build();
@@ -120,6 +121,9 @@ public class CharacterService {
         if (patch.getLastPlayedAt() != null) {
             character.setLastPlayedAt(patch.getLastPlayedAt());
         }
+        if (patch.getHomePlaceId() != null && !patch.getHomePlaceId().isBlank()) {
+            character.setHomePlaceId(patch.getHomePlaceId());
+        }
     }
 
     @Transactional
@@ -146,5 +150,12 @@ public class CharacterService {
             builder.append(INVITE_CODE_ALPHABET.charAt(index));
         }
         return builder.toString();
+    }
+
+    private String resolveHomePlaceId(String requestedHomePlaceId) {
+        if (requestedHomePlaceId == null || requestedHomePlaceId.isBlank()) {
+            return "house1";
+        }
+        return requestedHomePlaceId.trim();
     }
 }

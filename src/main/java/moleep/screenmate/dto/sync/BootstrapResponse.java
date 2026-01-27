@@ -35,6 +35,7 @@ public class BootstrapResponse {
         private String name;
         private String species;
         private String inviteCode;
+        private String homePlaceId;
         private String personality;
         private Integer stageIndex;
         private Integer happiness;
