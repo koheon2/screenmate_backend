@@ -2,12 +2,16 @@ package moleep.screenmate.service.sync;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import moleep.screenmate.domain.achievement.UserAchievement;
+import moleep.screenmate.domain.achievement.UserAchievementRepository;
 import moleep.screenmate.domain.character.Character;
 import moleep.screenmate.domain.character.CharacterRepository;
 import moleep.screenmate.domain.event.CharacterEvent;
 import moleep.screenmate.domain.event.CharacterEventRepository;
 import moleep.screenmate.domain.memory.CharacterQaMemory;
 import moleep.screenmate.domain.memory.CharacterQaMemoryRepository;
+import moleep.screenmate.domain.place.UserDiscoveredPlace;
+import moleep.screenmate.domain.place.UserDiscoveredPlaceRepository;
 import moleep.screenmate.domain.user.User;
 import moleep.screenmate.dto.sync.BootstrapResponse;
 import org.springframework.data.domain.PageRequest;
@@ -30,6 +34,8 @@ public class BootstrapService {
     private final CharacterRepository characterRepository;
     private final CharacterQaMemoryRepository qaMemoryRepository;
     private final CharacterEventRepository eventRepository;
+    private final UserAchievementRepository userAchievementRepository;
+    private final UserDiscoveredPlaceRepository userDiscoveredPlaceRepository;
 
     @Transactional(readOnly = true)
     public BootstrapResponse getBootstrapData(User user) {
@@ -53,6 +59,14 @@ public class BootstrapService {
                 .map(c -> mapCharacterData(c, qaMemories.get(c.getId()), recentEvents.getOrDefault(c.getId(), Collections.emptyList())))
                 .collect(Collectors.toList());
 
+        List<BootstrapResponse.AchievementData> achievements = userAchievementRepository.findByUserIdWithDefinition(user.getId()).stream()
+                .map(this::mapAchievementData)
+                .collect(Collectors.toList());
+
+        List<BootstrapResponse.DiscoveredPlaceData> discoveredPlaces = userDiscoveredPlaceRepository.findByUserIdWithDefinition(user.getId()).stream()
+                .map(this::mapDiscoveredPlaceData)
+                .collect(Collectors.toList());
+
         return BootstrapResponse.builder()
                 .user(BootstrapResponse.UserData.builder()
                         .id(user.getId())
@@ -63,6 +77,8 @@ public class BootstrapService {
                         .lastLoginAt(user.getLastLoginAt())
                         .build())
                 .characters(characterDataList)
+                .achievements(achievements)
+                .discoveredPlaces(discoveredPlaces)
                 .build();
     }
 
@@ -105,6 +121,34 @@ public class BootstrapService {
                 .version(character.getVersion())
                 .qaMemory(qaMemoryData)
                 .recentEvents(eventDataList)
+                .build();
+    }
+
+    private BootstrapResponse.AchievementData mapAchievementData(UserAchievement achievement) {
+        return BootstrapResponse.AchievementData.builder()
+                .id(achievement.getId())
+                .achievementId(achievement.getAchievement().getId())
+                .name(achievement.getAchievement().getName())
+                .description(achievement.getAchievement().getDescription())
+                .category(achievement.getAchievement().getCategory())
+                .points(achievement.getAchievement().getPoints())
+                .hidden(achievement.getAchievement().getHidden())
+                .progress(achievement.getProgress())
+                .unlockedAt(achievement.getUnlockedAt())
+                .metadata(achievement.getMetadata())
+                .build();
+    }
+
+    private BootstrapResponse.DiscoveredPlaceData mapDiscoveredPlaceData(UserDiscoveredPlace place) {
+        return BootstrapResponse.DiscoveredPlaceData.builder()
+                .id(place.getId())
+                .placeId(place.getPlace().getId())
+                .name(place.getPlace().getName())
+                .region(place.getPlace().getRegion())
+                .rarity(place.getPlace().getRarity())
+                .discoveredAt(place.getDiscoveredAt())
+                .discoveredByCharacterId(place.getDiscoveredByCharacter() != null ? place.getDiscoveredByCharacter().getId() : null)
+                .metadata(place.getMetadata())
                 .build();
     }
 }

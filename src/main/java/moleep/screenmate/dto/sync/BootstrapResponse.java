@@ -14,6 +14,8 @@ public class BootstrapResponse {
 
     private UserData user;
     private List<CharacterData> characters;
+    private List<AchievementData> achievements;
+    private List<DiscoveredPlaceData> discoveredPlaces;
 
     @Getter
     @Builder
@@ -65,5 +67,33 @@ public class BootstrapResponse {
         private String eventType;
         private String eventText;
         private Instant createdAt;
+    }
+
+    @Getter
+    @Builder
+    public static class AchievementData {
+        private UUID id;
+        private String achievementId;
+        private String name;
+        private String description;
+        private String category;
+        private Integer points;
+        private Boolean hidden;
+        private Integer progress;
+        private Instant unlockedAt;
+        private Map<String, Object> metadata;
+    }
+
+    @Getter
+    @Builder
+    public static class DiscoveredPlaceData {
+        private UUID id;
+        private String placeId;
+        private String name;
+        private String region;
+        private String rarity;
+        private Instant discoveredAt;
+        private UUID discoveredByCharacterId;
+        private Map<String, Object> metadata;
     }
 }

@@ -302,6 +302,15 @@ users (1) ──────── (1) refresh_tokens
 | POST | `/characters/{id}/friends/{friendId}/messages` | 메시지/이모티콘 보내기 |
 | GET | `/characters/{id}/friends/{friendId}/messages` | 메시지 목록 조회 |
 
+### 유저 진행도 (User Progress)
+
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| GET | `/users/me/achievements` | 내 업적 조회 |
+| PUT | `/users/me/achievements/{achievementId}` | 업적 진행도/해금 저장 |
+| GET | `/users/me/places` | 내 발견 장소 조회 |
+| PUT | `/users/me/places/{placeId}` | 장소 발견 기록 |
+
 ### LLM 프록시
 
 | Method | Endpoint | Content-Type | 설명 |
