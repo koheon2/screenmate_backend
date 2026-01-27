@@ -28,6 +28,9 @@ public interface CharacterRepository extends JpaRepository<Character, UUID> {
 
     boolean existsByInviteCode(String inviteCode);
 
+    @Query("select c from Character c join fetch c.user where c.id in :ids")
+    List<Character> findAllByIdInWithUser(@Param("ids") List<UUID> ids);
+
     @Query("SELECT c FROM Character c JOIN c.user u " +
             "WHERE (LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%')) " +
             "OR LOWER(c.species) LIKE LOWER(CONCAT('%', :query, '%')) " +
