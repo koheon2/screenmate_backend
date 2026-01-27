@@ -155,7 +155,7 @@ public class LlmProxyService {
         prompt.append("\n장소/이벤트 규칙:\n");
         prompt.append("- 은행 페이데이 조건: 성장 단계 3 이상 && 친밀도 90 이상.\n");
         prompt.append("- 사용자가 '요즘 돈이 없다/거지/돈 부족/텅장' 류의 말을 하면, 위 조건을 만족할 때 actions에 PAYDAY를 포함해.\n");
-        prompt.append("- PAYDAY는 드물게만 쓰고, 조건을 만족하지 않으면 절대 쓰지 마.\n");
+        prompt.append("- 조건을 만족하지 않으면 PAYDAY를 절대 쓰지 마.\n");
 
         prompt.append("\n감정 규칙:\n");
         prompt.append("- 행복도가 낮으면: 투덜거리거나 심술을 내고, 관심을 요구해.\n");
