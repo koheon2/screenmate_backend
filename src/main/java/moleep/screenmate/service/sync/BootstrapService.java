@@ -8,6 +8,10 @@ import moleep.screenmate.domain.character.Character;
 import moleep.screenmate.domain.character.CharacterRepository;
 import moleep.screenmate.domain.event.CharacterEvent;
 import moleep.screenmate.domain.event.CharacterEventRepository;
+import moleep.screenmate.domain.friend.CharacterFriendRequest;
+import moleep.screenmate.domain.friend.CharacterFriendRequestRepository;
+import moleep.screenmate.domain.friend.CharacterFriendship;
+import moleep.screenmate.domain.friend.CharacterFriendshipRepository;
 import moleep.screenmate.domain.memory.CharacterQaMemory;
 import moleep.screenmate.domain.memory.CharacterQaMemoryRepository;
 import moleep.screenmate.domain.place.UserDiscoveredPlace;
@@ -36,6 +40,8 @@ public class BootstrapService {
     private final CharacterEventRepository eventRepository;
     private final UserAchievementRepository userAchievementRepository;
     private final UserDiscoveredPlaceRepository userDiscoveredPlaceRepository;
+    private final CharacterFriendshipRepository friendshipRepository;
+    private final CharacterFriendRequestRepository friendRequestRepository;
 
     @Transactional(readOnly = true)
     public BootstrapResponse getBootstrapData(User user) {
@@ -55,8 +61,21 @@ public class BootstrapService {
                                 c.getId(), PageRequest.of(0, RECENT_EVENTS_LIMIT)).getContent()
                 ));
 
+        Map<UUID, List<CharacterFriendship>> friendships = characters.stream()
+                .collect(Collectors.toMap(Character::getId, c -> friendshipRepository.findByCharacterId(c.getId())));
+
+        Map<UUID, List<CharacterFriendRequest>> incomingRequests = characters.stream()
+                .collect(Collectors.toMap(Character::getId,
+                        c -> friendRequestRepository.findIncomingByCharacterIdAndStatus(c.getId(), CharacterFriendRequest.Status.PENDING)));
+
         List<BootstrapResponse.CharacterData> characterDataList = characters.stream()
-                .map(c -> mapCharacterData(c, qaMemories.get(c.getId()), recentEvents.getOrDefault(c.getId(), Collections.emptyList())))
+                .map(c -> mapCharacterData(
+                        c,
+                        qaMemories.get(c.getId()),
+                        recentEvents.getOrDefault(c.getId(), Collections.emptyList()),
+                        friendships.getOrDefault(c.getId(), Collections.emptyList()),
+                        incomingRequests.getOrDefault(c.getId(), Collections.emptyList())
+                ))
                 .collect(Collectors.toList());
 
         List<BootstrapResponse.AchievementData> achievements = userAchievementRepository.findByUserIdWithDefinition(user.getId()).stream()
@@ -82,7 +101,13 @@ public class BootstrapService {
                 .build();
     }
 
-    private BootstrapResponse.CharacterData mapCharacterData(Character character, CharacterQaMemory qaMemory, List<CharacterEvent> events) {
+    private BootstrapResponse.CharacterData mapCharacterData(
+            Character character,
+            CharacterQaMemory qaMemory,
+            List<CharacterEvent> events,
+            List<CharacterFriendship> friendships,
+            List<CharacterFriendRequest> incomingRequests
+    ) {
         BootstrapResponse.QaMemoryData qaMemoryData = null;
         if (qaMemory != null) {
             qaMemoryData = BootstrapResponse.QaMemoryData.builder()
@@ -98,6 +123,14 @@ public class BootstrapService {
                         .eventText(e.getEventText())
                         .createdAt(e.getCreatedAt())
                         .build())
+                .collect(Collectors.toList());
+
+        List<BootstrapResponse.FriendData> friendDataList = friendships.stream()
+                .map(f -> mapFriendData(character, f))
+                .collect(Collectors.toList());
+
+        List<BootstrapResponse.FriendRequestData> requestDataList = incomingRequests.stream()
+                .map(this::mapFriendRequestData)
                 .collect(Collectors.toList());
 
         return BootstrapResponse.CharacterData.builder()
@@ -122,6 +155,37 @@ public class BootstrapService {
                 .version(character.getVersion())
                 .qaMemory(qaMemoryData)
                 .recentEvents(eventDataList)
+                .friends(friendDataList)
+                .incomingFriendRequests(requestDataList)
+                .build();
+    }
+
+    private BootstrapResponse.FriendData mapFriendData(Character self, CharacterFriendship friendship) {
+        Character friend = friendship.getCharacterA().getId().equals(self.getId())
+                ? friendship.getCharacterB()
+                : friendship.getCharacterA();
+        return BootstrapResponse.FriendData.builder()
+                .friendshipId(friendship.getId())
+                .friendCharacterId(friend.getId())
+                .friendName(friend.getName())
+                .friendSpecies(friend.getSpecies())
+                .friendInviteCode(friend.getInviteCode())
+                .intimacy(friendship.getIntimacy())
+                .updatedAt(friendship.getUpdatedAt())
+                .build();
+    }
+
+    private BootstrapResponse.FriendRequestData mapFriendRequestData(CharacterFriendRequest request) {
+        Character requester = request.getRequesterCharacter();
+        return BootstrapResponse.FriendRequestData.builder()
+                .id(request.getId())
+                .requesterCharacterId(requester.getId())
+                .requesterName(requester.getName())
+                .requesterSpecies(requester.getSpecies())
+                .requesterInviteCode(requester.getInviteCode())
+                .message(request.getMessage())
+                .status(request.getStatus().name())
+                .createdAt(request.getCreatedAt())
                 .build();
     }
 

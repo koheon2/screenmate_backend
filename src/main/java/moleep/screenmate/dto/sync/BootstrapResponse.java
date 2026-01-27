@@ -52,6 +52,8 @@ public class BootstrapResponse {
         private Long version;
         private QaMemoryData qaMemory;
         private List<EventData> recentEvents;
+        private List<FriendData> friends;
+        private List<FriendRequestData> incomingFriendRequests;
     }
 
     @Getter
@@ -67,6 +69,31 @@ public class BootstrapResponse {
         private UUID id;
         private String eventType;
         private String eventText;
+        private Instant createdAt;
+    }
+
+    @Getter
+    @Builder
+    public static class FriendData {
+        private UUID friendshipId;
+        private UUID friendCharacterId;
+        private String friendName;
+        private String friendSpecies;
+        private String friendInviteCode;
+        private Integer intimacy;
+        private Instant updatedAt;
+    }
+
+    @Getter
+    @Builder
+    public static class FriendRequestData {
+        private UUID id;
+        private UUID requesterCharacterId;
+        private String requesterName;
+        private String requesterSpecies;
+        private String requesterInviteCode;
+        private String message;
+        private String status;
         private Instant createdAt;
     }
 
