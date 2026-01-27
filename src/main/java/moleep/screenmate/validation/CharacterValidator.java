@@ -27,6 +27,10 @@ public class CharacterValidator {
             validateStatRange("health", patch.getHealth());
         }
 
+        if (patch.getIntimacyScore() != null) {
+            validateStatRange("intimacyScore", patch.getIntimacyScore());
+        }
+
         if (patch.getAggressionGauge() != null) {
             validateStatRange("aggressionGauge", patch.getAggressionGauge());
         }
@@ -47,6 +51,13 @@ public class CharacterValidator {
     }
 
     private void validateStatRange(String fieldName, Integer value) {
+        if (value < MIN_STAT_VALUE || value > MAX_STAT_VALUE) {
+            throw new BadRequestException("INVALID_STAT_VALUE",
+                    String.format("%s must be between %d and %d", fieldName, MIN_STAT_VALUE, MAX_STAT_VALUE));
+        }
+    }
+
+    private void validateStatRange(String fieldName, Double value) {
         if (value < MIN_STAT_VALUE || value > MAX_STAT_VALUE) {
             throw new BadRequestException("INVALID_STAT_VALUE",
                     String.format("%s must be between %d and %d", fieldName, MIN_STAT_VALUE, MAX_STAT_VALUE));

@@ -103,6 +103,9 @@ public class CharacterService {
         if (patch.getHealth() != null) {
             character.setHealth(patch.getHealth());
         }
+        if (patch.getIntimacyScore() != null) {
+            character.setIntimacyScore(patch.getIntimacyScore());
+        }
         if (patch.getAggressionGauge() != null) {
             character.setAggressionGauge(patch.getAggressionGauge());
         }

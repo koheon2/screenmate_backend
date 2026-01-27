@@ -33,6 +33,9 @@ public class CharacterPatchRequest {
     @Schema(description = "건강 (0-100)", example = "100", minimum = "0", maximum = "100")
     private Integer health;
 
+    @Schema(description = "유저 친밀도 (0-100)", example = "82.5", minimum = "0", maximum = "100")
+    private Double intimacyScore;
+
     @Schema(description = "공격성 게이지 (0-100)", example = "10", minimum = "0", maximum = "100")
     private Integer aggressionGauge;
 
