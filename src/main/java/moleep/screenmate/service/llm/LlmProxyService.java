@@ -152,6 +152,11 @@ public class LlmProxyService {
         prompt.append("- 친밀도 중간(30~70): 가벼운 장난과 관심 표현 가능.\n");
         prompt.append("- 친밀도 높음(70~100): 친근하고 사적인 말, 내부 농담/애착 표현 가능.\n");
 
+        prompt.append("\n장소/이벤트 규칙:\n");
+        prompt.append("- 은행 페이데이 조건: 성장 단계 3 이상 && 친밀도 90 이상.\n");
+        prompt.append("- 사용자가 '요즘 돈이 없다/거지/돈 부족/텅장' 류의 말을 하면, 위 조건을 만족할 때 actions에 PAYDAY를 포함해.\n");
+        prompt.append("- PAYDAY는 드물게만 쓰고, 조건을 만족하지 않으면 절대 쓰지 마.\n");
+
         prompt.append("\n감정 규칙:\n");
         prompt.append("- 행복도가 낮으면: 투덜거리거나 심술을 내고, 관심을 요구해.\n");
         prompt.append("- 행복도가 높으면: 적당히 밝고 기분 좋은 톤을 유지해.\n");
@@ -171,7 +176,7 @@ public class LlmProxyService {
         prompt.append("  * 더 친해졌다고 느끼면 0.1\n");
         prompt.append("  * 무례하거나 불쾌하면 -0.3\n");
         prompt.append("  * 애매하면 0\n");
-        prompt.append("\n허용 액션 타입: APPEAR_EDGE, PLAY_ANIM, SPEAK, MOVE, EMOTE, SLEEP\n");
+        prompt.append("\n허용 액션 타입: APPEAR_EDGE, PLAY_ANIM, SPEAK, MOVE, EMOTE, SLEEP, PAYDAY\n");
 
         return prompt.toString();
     }

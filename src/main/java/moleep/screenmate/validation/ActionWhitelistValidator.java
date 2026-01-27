@@ -16,7 +16,8 @@ public class ActionWhitelistValidator {
             "SPEAK",
             "MOVE",
             "EMOTE",
-            "SLEEP"
+            "SLEEP",
+            "PAYDAY"
     );
 
     public void validateActions(List<LlmGenerateResponse.Action> actions) {
