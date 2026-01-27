@@ -22,6 +22,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.util.*;
 
@@ -58,19 +59,26 @@ public class LlmProxyService {
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("model", openAiProperties.getModel());
         requestBody.put("messages", messages);
-        requestBody.put("max_tokens", 1000);
+        requestBody.put("max_tokens", 3000);
         requestBody.put("response_format", Map.of("type", "json_object"));
 
         log.debug("Sending request to OpenAI for character: {}", character.getId());
 
-        String responseJson = openAiWebClient
-                .post()
-                .uri("/v1/chat/completions")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(requestBody)
-                .retrieve()
-                .bodyToMono(String.class)
-                .block();
+        String responseJson;
+        try {
+            responseJson = openAiWebClient
+                    .post()
+                    .uri("/v1/chat/completions")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+        } catch (WebClientResponseException e) {
+            log.error("OpenAI API error: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new BadRequestException("OPENAI_API_ERROR",
+                    "OpenAI API error: " + e.getStatusCode().value());
+        }
 
         LlmGenerateResponse response = parseAndValidateResponse(responseJson);
         applyQaPatchIfPresent(character, response.getQaPatch());
