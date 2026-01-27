@@ -7,6 +7,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
@@ -45,6 +46,17 @@ public class Character {
     @Column(name = "stage_index", nullable = false)
     @Builder.Default
     private Integer stageIndex = 0;
+
+    @Column(name = "intimacy_score", nullable = false)
+    @Builder.Default
+    private Double intimacyScore = 0.0;
+
+    @Column(name = "intimacy_daily_date")
+    private LocalDate intimacyDailyDate;
+
+    @Column(name = "intimacy_daily_count", nullable = false)
+    @Builder.Default
+    private Integer intimacyDailyCount = 0;
 
     @Column(nullable = false)
     @Builder.Default

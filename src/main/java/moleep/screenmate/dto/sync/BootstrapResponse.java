@@ -38,6 +38,7 @@ public class BootstrapResponse {
         private String homePlaceId;
         private String personality;
         private Integer stageIndex;
+        private Double intimacyScore;
         private Integer happiness;
         private Integer hunger;
         private Integer health;

@@ -12,6 +12,9 @@ public class QaMemoryValidator {
     private static final Set<String> ALLOWED_KEY_PREFIXES = Set.of(
             "user_", "pref_", "fact_", "memory_", "context_"
     );
+    private static final Set<String> ALLOWED_EXACT_KEYS = Set.of(
+            "conversation_summary"
+    );
     private static final int MAX_KEY_LENGTH = 100;
     private static final int MAX_VALUE_LENGTH = 2000;
     private static final int MAX_ENTRIES = 100;
@@ -45,7 +48,9 @@ public class QaMemoryValidator {
         boolean hasValidPrefix = ALLOWED_KEY_PREFIXES.stream()
                 .anyMatch(key::startsWith);
 
-        if (!hasValidPrefix) {
+        boolean isAllowedExactKey = ALLOWED_EXACT_KEYS.contains(key);
+
+        if (!hasValidPrefix && !isAllowedExactKey) {
             throw new BadRequestException("INVALID_QA_KEY_PREFIX",
                     String.format("QA key must start with one of: %s", ALLOWED_KEY_PREFIXES));
         }

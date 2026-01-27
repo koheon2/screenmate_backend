@@ -34,6 +34,9 @@ public class CharacterResponse {
     @Schema(description = "진화 단계 (0-3)", example = "1")
     private Integer stageIndex;
 
+    @Schema(description = "유저와의 친밀도 (0-100)", example = "12.4")
+    private Double intimacyScore;
+
     @Schema(description = "행복도 (0-100)", example = "75")
     private Integer happiness;
 
@@ -79,6 +82,7 @@ public class CharacterResponse {
                 .homePlaceId(character.getHomePlaceId())
                 .personality(character.getPersonality())
                 .stageIndex(character.getStageIndex())
+                .intimacyScore(character.getIntimacyScore())
                 .happiness(character.getHappiness())
                 .hunger(character.getHunger())
                 .health(character.getHealth())

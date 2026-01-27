@@ -8,6 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 import moleep.screenmate.config.OpenAiProperties;
 import moleep.screenmate.config.RateLimitConfig;
 import moleep.screenmate.domain.character.Character;
+import moleep.screenmate.domain.character.CharacterRepository;
+import moleep.screenmate.domain.conversation.CharacterConversation;
+import moleep.screenmate.domain.conversation.CharacterConversationRepository;
 import moleep.screenmate.domain.memory.CharacterQaMemory;
 import moleep.screenmate.domain.memory.CharacterQaMemoryRepository;
 import moleep.screenmate.domain.user.User;
@@ -24,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import java.time.LocalDate;
 import java.util.*;
 
 @Slf4j
@@ -33,6 +37,9 @@ public class LlmProxyService {
 
     private static final long MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
     private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of("image/png", "image/jpeg", "image/gif", "image/webp");
+    private static final int INTIMACY_DAILY_CAP = 30;
+    private static final int CONVERSATION_WINDOW = 20;
+    private static final String SUMMARY_KEY = "conversation_summary";
 
     private final WebClient openAiWebClient;
     private final OpenAiProperties openAiProperties;
@@ -41,6 +48,8 @@ public class LlmProxyService {
     private final ActionWhitelistValidator actionWhitelistValidator;
     private final QaMemoryValidator qaMemoryValidator;
     private final CharacterQaMemoryRepository qaMemoryRepository;
+    private final CharacterRepository characterRepository;
+    private final CharacterConversationRepository conversationRepository;
     private final ObjectMapper objectMapper;
 
     public LlmGenerateResponse generate(User user, LlmGenerateRequest request, MultipartFile screenshot) {
@@ -50,10 +59,11 @@ public class LlmProxyService {
 
         Character character = ownershipValidator.validateAndGetCharacter(request.getCharacterId(), user);
 
-        CharacterQaMemory qaMemory = qaMemoryRepository.findByCharacterId(character.getId())
-                .orElse(null);
+        CharacterQaMemory qaMemory = qaMemoryRepository.findByCharacterId(character.getId()).orElse(null);
 
-        String systemPrompt = buildSystemPrompt(character, qaMemory);
+        List<CharacterConversation> recentConversations = getRecentConversations(character.getId());
+
+        String systemPrompt = buildSystemPrompt(character, qaMemory, recentConversations);
         List<Map<String, Object>> messages = buildMessages(systemPrompt, request.getUserMessage(), screenshot);
 
         Map<String, Object> requestBody = new HashMap<>();
@@ -82,10 +92,24 @@ public class LlmProxyService {
 
         LlmGenerateResponse response = parseAndValidateResponse(responseJson);
         applyQaPatchIfPresent(character, response.getQaPatch());
-        return response;
+        IntimacyResult intimacyResult = applyIntimacyDelta(character, response.getIntimacyDelta());
+
+        persistConversationAndMaybeSummarize(character, request.getUserMessage(), response.getMessage());
+        characterRepository.save(character);
+
+        return LlmGenerateResponse.builder()
+                .message(response.getMessage())
+                .actions(response.getActions())
+                .qaPatch(response.getQaPatch())
+                .emotion(response.getEmotion())
+                .intimacyDelta(response.getIntimacyDelta())
+                .intimacyScore(intimacyResult.score())
+                .intimacyDeltaApplied(intimacyResult.applied())
+                .intimacyDailyCount(intimacyResult.dailyCount())
+                .build();
     }
 
-    private String buildSystemPrompt(Character character, CharacterQaMemory qaMemory) {
+    private String buildSystemPrompt(Character character, CharacterQaMemory qaMemory, List<CharacterConversation> recentConversations) {
         StringBuilder prompt = new StringBuilder();
         prompt.append("너는 사용자의 데스크톱에 사는 다마고치야.\n");
         prompt.append("사용자가 하는 일을 알아차리고, 진짜 살아있는 펫처럼 상호작용해.\n");
@@ -106,6 +130,31 @@ public class LlmProxyService {
         prompt.append("- 배고픔: ").append(character.getHunger()).append("/100\n");
         prompt.append("- 건강: ").append(character.getHealth()).append("/100\n");
         prompt.append("- 성장 단계: ").append(character.getStageIndex()).append("\n");
+        prompt.append("- 유저 친밀도: ").append(String.format(Locale.US, "%.1f", character.getIntimacyScore())).append("/100\n");
+
+        String summary = qaMemory != null ? qaMemory.getQaData().get(SUMMARY_KEY) : null;
+        if (summary != null && !summary.isBlank()) {
+            prompt.append("\n대화 요약(오래된 기억):\n");
+            prompt.append(summary).append("\n");
+        }
+
+        if (!recentConversations.isEmpty()) {
+            prompt.append("\n최근 대화 ").append(CONVERSATION_WINDOW).append("개:\n");
+            for (CharacterConversation convo : recentConversations) {
+                String role = convo.getRole() == CharacterConversation.Role.USER ? "사용자" : "다마고치";
+                prompt.append("- ").append(role).append(": ").append(convo.getContent()).append("\n");
+            }
+        }
+
+        prompt.append("\n성장 단계 페르소나 규칙:\n");
+        prompt.append("- 1단계(유아): 순수하고 호기심 많고, 감정 표현이 직설적.\n");
+        prompt.append("- 2단계(사춘기 청소년): 약간 까칠하고 반항적일 수 있지만 관심은 원함.\n");
+        prompt.append("- 3단계(성인): 더 안정적이고 능청스럽고, 상황 파악이 빠름.\n");
+
+        prompt.append("\n친밀도 말투 규칙:\n");
+        prompt.append("- 친밀도 낮음(0~30): 형식적이고 거리감 있는 반말. 과한 사적 질문 금지.\n");
+        prompt.append("- 친밀도 중간(30~70): 가벼운 장난과 관심 표현 가능.\n");
+        prompt.append("- 친밀도 높음(70~100): 친근하고 사적인 말, 내부 농담/애착 표현 가능.\n");
 
         prompt.append("\n감정 규칙:\n");
         prompt.append("- 행복도가 낮으면: 투덜거리거나 심술을 내고, 관심을 요구해.\n");
@@ -123,6 +172,10 @@ public class LlmProxyService {
         prompt.append("- actions: 액션 배열 [{type, params}]\n");
         prompt.append("- qaPatch: 기억할 키-값 (키는 user_, pref_, fact_, memory_, context_ 접두사 필수; 없으면 {})\n");
         prompt.append("- emotion: 현재 감정\n");
+        prompt.append("- intimacyDelta: 이번 대화로 친밀도가 어떻게 변했는지 숫자로 제안 (-0.3, 0, 0.1 중 하나만)\n");
+        prompt.append("  * 더 친해졌다고 느끼면 0.1\n");
+        prompt.append("  * 무례하거나 불쾌하면 -0.3\n");
+        prompt.append("  * 애매하면 0\n");
         prompt.append("\n허용 액션 타입: APPEAR_EDGE, PLAY_ANIM, SPEAK, MOVE, EMOTE, SLEEP\n");
 
         return prompt.toString();
@@ -250,11 +303,24 @@ public class LlmProxyService {
                 qaMemoryValidator.validateQaPatch(qaPatch);
             }
 
+            Double intimacyDelta = null;
+            JsonNode intimacyNode = contentJson.path("intimacyDelta");
+            if (intimacyNode.isNumber()) {
+                intimacyDelta = intimacyNode.asDouble();
+            } else if (intimacyNode.isTextual()) {
+                try {
+                    intimacyDelta = Double.parseDouble(intimacyNode.asText());
+                } catch (NumberFormatException ignored) {
+                    intimacyDelta = null;
+                }
+            }
+
             return LlmGenerateResponse.builder()
                     .message(message)
                     .actions(filteredActions)
                     .qaPatch(qaPatch.isEmpty() ? null : qaPatch)
                     .emotion(emotion)
+                    .intimacyDelta(intimacyDelta)
                     .build();
 
         } catch (JsonProcessingException e) {
@@ -292,5 +358,134 @@ public class LlmProxyService {
         CharacterQaMemory savedMemory = qaMemoryRepository.save(memory);
         log.info("Applied QA patch from LLM for character: {}, new version: {}",
                 character.getId(), savedMemory.getVersion());
+    }
+
+    private List<CharacterConversation> getRecentConversations(UUID characterId) {
+        List<CharacterConversation> recentDesc = conversationRepository.findTop20ByCharacterIdOrderByCreatedAtDesc(characterId);
+        Collections.reverse(recentDesc);
+        return recentDesc;
+    }
+
+    private void persistConversationAndMaybeSummarize(Character character, String userMessage, String assistantMessage) {
+        boolean wrote = false;
+        if (userMessage != null && !userMessage.isBlank()) {
+            conversationRepository.save(CharacterConversation.builder()
+                    .character(character)
+                    .role(CharacterConversation.Role.USER)
+                    .content(userMessage.trim())
+                    .build());
+            wrote = true;
+        }
+        if (assistantMessage != null && !assistantMessage.isBlank()) {
+            conversationRepository.save(CharacterConversation.builder()
+                    .character(character)
+                    .role(CharacterConversation.Role.ASSISTANT)
+                    .content(assistantMessage.trim())
+                    .build());
+            wrote = true;
+        }
+
+        if (!wrote) return;
+
+        long count = conversationRepository.countByCharacterId(character.getId());
+        if (count % CONVERSATION_WINDOW == 0) {
+            summarizeConversation(character);
+        }
+    }
+
+    private void summarizeConversation(Character character) {
+        CharacterQaMemory memory = qaMemoryRepository.findByCharacterId(character.getId())
+                .orElseGet(() -> CharacterQaMemory.builder().character(character).build());
+
+        String previousSummary = memory.getQaData().getOrDefault(SUMMARY_KEY, "");
+        List<CharacterConversation> recent = getRecentConversations(character.getId());
+
+        String summary = requestSummary(previousSummary, recent);
+        if (summary == null || summary.isBlank()) {
+            return;
+        }
+
+        memory.getQaData().put(SUMMARY_KEY, summary);
+        qaMemoryRepository.save(memory);
+        log.info("Updated conversation summary for character: {}", character.getId());
+    }
+
+    private String requestSummary(String previousSummary, List<CharacterConversation> recent) {
+        try {
+            StringBuilder convoBlock = new StringBuilder();
+            for (CharacterConversation convo : recent) {
+                String role = convo.getRole() == CharacterConversation.Role.USER ? "사용자" : "다마고치";
+                convoBlock.append(role).append(": ").append(convo.getContent()).append("\n");
+            }
+
+            String system = "너는 대화를 장기 기억용으로 요약하는 도우미야. 사실/선호/관계 변화를 중심으로 간결하게 한국어로 요약해.";
+            String user = "이전 요약:\n" + (previousSummary.isBlank() ? "(없음)" : previousSummary)
+                    + "\n\n최근 대화 20개:\n" + convoBlock
+                    + "\n\n위 정보를 합쳐 8~12문장으로 압축 요약해줘.";
+
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("model", openAiProperties.getModel());
+            requestBody.put("messages", List.of(
+                    Map.of("role", "system", "content", system),
+                    Map.of("role", "user", "content", user)
+            ));
+            requestBody.put("max_tokens", 600);
+
+            String responseJson = openAiWebClient
+                    .post()
+                    .uri("/v1/chat/completions")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+
+            JsonNode root = objectMapper.readTree(responseJson);
+            return root.path("choices").get(0).path("message").path("content").asText("");
+        } catch (Exception e) {
+            log.warn("Failed to summarize conversations", e);
+            return null;
+        }
+    }
+
+    private IntimacyResult applyIntimacyDelta(Character character, Double rawDelta) {
+        LocalDate today = LocalDate.now();
+        if (!today.equals(character.getIntimacyDailyDate())) {
+            character.setIntimacyDailyDate(today);
+            character.setIntimacyDailyCount(0);
+        }
+
+        if (rawDelta == null || Math.abs(rawDelta) < 1e-9) {
+            return new IntimacyResult(character.getIntimacyScore(), false, character.getIntimacyDailyCount());
+        }
+
+        if (character.getIntimacyDailyCount() >= INTIMACY_DAILY_CAP) {
+            return new IntimacyResult(character.getIntimacyScore(), false, character.getIntimacyDailyCount());
+        }
+
+        double delta = clampDelta(rawDelta);
+        double nextScore = clampScore(character.getIntimacyScore() + delta);
+        character.setIntimacyScore(nextScore);
+        character.setIntimacyDailyCount(character.getIntimacyDailyCount() + 1);
+
+        return new IntimacyResult(nextScore, true, character.getIntimacyDailyCount());
+    }
+
+    private double clampDelta(double delta) {
+        // Only allow the agreed discrete values to avoid prompt drift.
+        if (delta > 0.05) {
+            return 0.1;
+        }
+        if (delta < -0.15) {
+            return -0.3;
+        }
+        return 0.0;
+    }
+
+    private double clampScore(double score) {
+        return Math.max(0.0, Math.min(100.0, score));
+    }
+
+    private record IntimacyResult(Double score, boolean applied, int dailyCount) {
     }
 }

@@ -141,6 +141,7 @@ public class BootstrapService {
                 .homePlaceId(character.getHomePlaceId())
                 .personality(character.getPersonality())
                 .stageIndex(character.getStageIndex())
+                .intimacyScore(character.getIntimacyScore())
                 .happiness(character.getHappiness())
                 .hunger(character.getHunger())
                 .health(character.getHealth())
