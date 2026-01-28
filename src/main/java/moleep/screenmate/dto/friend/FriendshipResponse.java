@@ -22,6 +22,7 @@ public class FriendshipResponse {
     private String friendPersonality;
     private String friendOwnerDisplayName;
     private Integer friendStageIndex;
+    private Integer friendLevel;
     private Integer intimacy;
     private Instant createdAt;
     private Instant updatedAt;
@@ -36,6 +37,7 @@ public class FriendshipResponse {
                 .friendPersonality(friend.getPersonality())
                 .friendOwnerDisplayName(friend.getUser().getDisplayName())
                 .friendStageIndex(friend.getStageIndex())
+                .friendLevel(friend.getStageIndex())
                 .intimacy(friendship.getIntimacy())
                 .createdAt(friendship.getCreatedAt())
                 .updatedAt(friendship.getUpdatedAt())
