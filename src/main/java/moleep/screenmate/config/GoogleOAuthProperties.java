@@ -12,4 +12,5 @@ import org.springframework.context.annotation.Configuration;
 public class GoogleOAuthProperties {
 
     private String clientId;
+    private String clientSecret;
 }

@@ -1,5 +1,6 @@
 package moleep.screenmate.dto.sync;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -26,5 +27,5 @@ public class EventCreateRequest {
     private String eventText;
 
     @Schema(description = "추가 메타데이터 (JSON)", example = "{\"emotion\": \"happy\", \"target\": \"user\"}")
-    private String metadata;
+    private JsonNode metadata;
 }

@@ -171,6 +171,8 @@ public class BootstrapService {
                 .friendName(friend.getName())
                 .friendSpecies(friend.getSpecies())
                 .friendInviteCode(friend.getInviteCode())
+                .friendStageIndex(friend.getStageIndex())
+                .friendLevel(friend.getStageIndex())
                 .intimacy(friendship.getIntimacy())
                 .updatedAt(friendship.getUpdatedAt())
                 .build();

@@ -35,6 +35,7 @@ jwt:
 google:
   oauth:
     client-id: ${GOOGLE_CLIENT_ID:your-google-client-id}
+    client-secret: ${GOOGLE_CLIENT_SECRET:your-google-client-secret}
 
 openai:
   api-key: ${OPENAI_API_KEY:your-openai-api-key}

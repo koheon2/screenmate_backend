@@ -1,5 +1,7 @@
 package moleep.screenmate.service.sync;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import moleep.screenmate.domain.character.Character;
@@ -8,6 +10,7 @@ import moleep.screenmate.domain.event.CharacterEventRepository;
 import moleep.screenmate.domain.user.User;
 import moleep.screenmate.dto.sync.EventCreateRequest;
 import moleep.screenmate.dto.sync.EventResponse;
+import moleep.screenmate.exception.BadRequestException;
 import moleep.screenmate.validation.CharacterValidator;
 import moleep.screenmate.validation.OwnershipValidator;
 import org.springframework.data.domain.PageRequest;
@@ -26,6 +29,7 @@ public class EventService {
     private final CharacterEventRepository eventRepository;
     private final OwnershipValidator ownershipValidator;
     private final CharacterValidator characterValidator;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public EventResponse createEvent(UUID characterId, User user, EventCreateRequest request) {
@@ -33,11 +37,20 @@ public class EventService {
 
         characterValidator.validateEventText(request.getEventText());
 
+        String metadataJson = null;
+        if (request.getMetadata() != null) {
+            try {
+                metadataJson = objectMapper.writeValueAsString(request.getMetadata());
+            } catch (JsonProcessingException e) {
+                throw new BadRequestException("INVALID_METADATA", "metadata must be valid JSON");
+            }
+        }
+
         CharacterEvent event = CharacterEvent.builder()
                 .character(character)
                 .eventType(request.getEventType())
                 .eventText(request.getEventText())
-                .metadata(request.getMetadata())
+                .metadata(metadataJson)
                 .build();
 
         event = eventRepository.save(event);

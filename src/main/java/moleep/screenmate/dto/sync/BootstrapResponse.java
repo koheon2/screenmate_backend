@@ -81,6 +81,8 @@ public class BootstrapResponse {
         private String friendName;
         private String friendSpecies;
         private String friendInviteCode;
+        private Integer friendStageIndex;
+        private Integer friendLevel;
         private Integer intimacy;
         private Instant updatedAt;
     }
